@@ -309,7 +309,10 @@ if $log ; then
 	# test logger and journalctl commands
 	if lb_istrue $logger ; then
 		if lb_command_exists logger ; then
-			lb_command_exists journalctl && journalctl=true
+			# test journalctl
+			if lb_command_exists journalctl && journalctl -n 1 &> /dev/null ; then
+				journalctl=true
+			fi
 		else
 			logger=false
 		fi
