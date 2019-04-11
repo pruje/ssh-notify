@@ -1,0 +1,12 @@
+Hi,
+
+We send you this email because of a successful SSH login.
+
+Host: {{hostname}}
+User: {{user}}
+IP source: {{ip_source}}
+Date: {{date}}
+
+Regards,
+
+Your security team
