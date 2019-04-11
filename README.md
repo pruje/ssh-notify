@@ -13,7 +13,7 @@ For example, if the last connection is less than 1 hour, you will not reveive an
 **ssh-notify** uses `logger` and `journactl` commands to read/write the log,
 but you can use a custom log file if you have access issues.
 If you want to secure writes inside the logs, you can also run ssh-notify in sudo mode.
-In this case, you have to add SSH users in ssh-notify sudoers group.
+In this case, you have to add SSH users in `ssh-notify` sudoers group.
 
 ## Requirements
 - `bash`

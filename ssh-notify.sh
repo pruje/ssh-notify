@@ -10,9 +10,10 @@
 #  Copyright (c) 2017-2019 Jean Prunneaux              #
 #  Website: https://github.com/pruje/ssh-notify        #
 #                                                      #
-#  Version 1.0.0-beta.2 (2019-04-09)                   #
+#  Version 1.0.0 (2019-04-11)                          #
 #                                                      #
 ########################################################
+
 
 #
 #  Initialization
@@ -163,31 +164,34 @@ install() {
 		fi
 	fi
 
-	echo "WARNING:"
-	echo "If your users cannot use logger and journalctl commands, you can enable"
-	echo "the sudo mode."
-	echo "In this case, please be sure that this script is owned by root and cannot be modified by anyone,"
-	echo "because sudoers will be able to run it without password."
+	# no force mode
+	if [ "$1" != "-f" ] ; then
+		echo "WARNING:"
+		echo "If your users cannot use logger and journalctl commands, you can enable"
+		echo "the sudo mode."
+		echo "In this case, please be sure that this script is owned by root and cannot be modified by anyone,"
+		echo "because sudoers will be able to run it without password."
 
-	if lb_yesno "Do you want to enable sudoers to run this script?" ; then
-		# create ssh-notify group
-		groupadd -f ssh-notify
-		if [ $? != 0 ] ; then
-			lb_error "Cannot create group ssh-notify"
-			exit 1
-		fi
-
-		# create sudoers file
-		mkdir -p /etc/sudoers.d && touch /etc/sudoers.d/ssh-notify && \
-		chown root:root /etc/sudoers.d/ssh-notify	&& chmod 640 /etc/sudoers.d/ssh-notify && \
-		echo "%ssh-notify ALL = NOPASSWD:$lb_current_script" > /etc/sudoers.d/ssh-notify
-		if [ $? != 0 ] ; then
-			lb_error "sudoers file cannot be modified"
-			exit 1
-		fi
-
-		echo "Add all SSH users in the ssh-notify group to enable sudo mode."
+		lb_yesno "Do you want to enable sudoers to run this script?" || return 0
 	fi
+
+	# create ssh-notify group
+	groupadd -f ssh-notify
+	if [ $? != 0 ] ; then
+		lb_error "Cannot create group ssh-notify"
+		exit 1
+	fi
+
+	# create sudoers file
+	mkdir -p /etc/sudoers.d && touch /etc/sudoers.d/ssh-notify && \
+	chown root:root /etc/sudoers.d/ssh-notify	&& chmod 640 /etc/sudoers.d/ssh-notify && \
+	echo "%ssh-notify ALL = NOPASSWD:$lb_current_script" > /etc/sudoers.d/ssh-notify
+	if [ $? != 0 ] ; then
+		lb_error "sudoers file cannot be modified"
+		exit 1
+	fi
+
+	echo "Add all SSH users in the ssh-notify group to enable sudo mode."
 
 	echo "Install finished."
 }
@@ -224,6 +228,10 @@ while [ $# -gt 0 ] ; do
 			;;
 		-i|--install)
 			install
+			exit $?
+			;;
+		--force-install)
+			install -f
 			exit $?
 			;;
 		-u|--uninstall)
