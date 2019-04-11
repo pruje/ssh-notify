@@ -163,6 +163,13 @@ install() {
 		fi
 	fi
 
+	echo "WARNING:"
+	echo "If your users cannot use logger and journalctl commands, you can enable"
+	echo "the sudo mode."
+	echo "In this case, please be sure that this script is owned by root and cannot be modified by anyone,"
+	echo "because sudoers will be able to run it without password."
+	lb_yesno "Do you want to enable sudoers to run this script?" || exit
+
 	# create ssh-notify group
 	groupadd -f ssh-notify
 	if [ $? != 0 ] ; then
