@@ -10,7 +10,7 @@
 #  Copyright (c) 2017-2019 Jean Prunneaux              #
 #  Website: https://github.com/pruje/ssh-notify        #
 #                                                      #
-#  Version 1.0.0 (2019-04-11)                          #
+#  Version 1.0.1 (2019-05-06)                          #
 #                                                      #
 ########################################################
 
@@ -59,9 +59,9 @@ print_help() {
 # Usage: read_log FILTER
 read_log() {
 	if lb_istrue $journalctl ; then
-		journalctl -g "$*" 2> /dev/null
+		journalctl -g "$*" 2> /dev/null | tail -1
 	else
-		grep "$*" "$log_file" 2> /dev/null
+		grep "$*" "$log_file" 2> /dev/null | tail -1
 	fi
 }
 
@@ -268,11 +268,9 @@ fi
 # sudo mode: rerun script
 if lb_istrue $sudo_mode && [ "$(whoami)" != root ] ; then
 	# test if user is part of ssh-notify group
-	if groups $user 2> /dev/null | grep -wq ssh-notify ; then
+	if groups 2> /dev/null | grep -wq ssh-notify ; then
 		sudo "$0" "$1" $user
 		exit $?
-	else
-		exit 1
 	fi
 fi
 
@@ -356,7 +354,7 @@ if $log ; then
 	log_message="SSH connection success $user@$ip_source"
 
 	# read last line of logs
-	line=$(grep "$log_message" "$log_file" 2> /dev/null | tail -1)
+	line=$(read_log "$log_message")
 
 	if [ -n "$line" ] ; then
 		# get timestamp
