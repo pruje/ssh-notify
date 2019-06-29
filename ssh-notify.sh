@@ -8,14 +8,14 @@
 #  Copyright (c) 2017-2019 Jean Prunneaux
 #  Website: https://github.com/pruje/ssh-notify
 #
-#  Version 1.1.0 (2019-06-29)
+#  Version 1.1.1 (2019-06-29)
 #
 
 #
 #  Initialization
 #
 
-declare -r version=1.1.0
+declare -r version=1.1.1
 
 # load libbash
 source "$(dirname "$0")"/libbash/libbash.sh &> /dev/null
@@ -60,7 +60,7 @@ read_log() {
 		# limit print for journalctl
 		local date_limit=$(lb_timestamp2date -f "%Y-%m-%d %H:%M:%S" $(($now - $notify_frequency)))
 
-		journalctl --since "$date_limit" 2> /dev/null | grep "$*" | tail -1
+		journalctl --output short-full --since "$date_limit" 2> /dev/null | grep "$*" | tail -1
 	else
 		grep "$*" "$log_file" 2> /dev/null | tail -1
 	fi
@@ -77,7 +77,7 @@ get_timestamp() {
 	spaces+=1
 
 	# get date from line
-	d=$(echo "$*" | awk "{for(i=1;i<=$spaces;++i) print \$i}")
+	d=$(echo "$*" | awk "{for(i=1;i<=$spaces;++i) printf \$i \" \"}")
 
 	# get real date
 	date=$(date -d "$d" '+%Y-%m-%d %H:%M:%S %Z' 2> /dev/null) || return 1
@@ -174,7 +174,7 @@ done
 
 # no ssh: cancel
 if [ -z "$ssh_info" ] ; then
-	lb_error "hey dude, you are not a ssh user!"
+	lb_error "Hey dude, you are not a ssh user!"
 	exit 1
 fi
 
@@ -184,8 +184,11 @@ ip_source=$(echo $ssh_info | awk '{print $1}')
 # get current timestamp
 now=$(date +%s)
 
-# load config
-if ! lb_import_config "$config_file" ; then
+# analyse config template
+lb_read_config -a "$lb_current_script_directory"/ssh-notify.conf
+
+# load config and import only good variables
+if ! lb_import_config "$config_file" "${lb_read_config[@]}" ; then
 	lb_error "ssh-notify: error in config"
 	exit 1
 fi
