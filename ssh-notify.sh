@@ -1,28 +1,26 @@
 #!/bin/bash
-
-########################################################
-#                                                      #
-#  ssh-notify                                          #
-#  A script to send notifications when somebody        #
-#  made a connection in SSH.                           #
-#                                                      #
-#  MIT License                                         #
-#  Copyright (c) 2017-2019 Jean Prunneaux              #
-#  Website: https://github.com/pruje/ssh-notify        #
-#                                                      #
-#  Version 1.0.1 (2019-05-06)                          #
-#                                                      #
-########################################################
-
+#
+#  ssh-notify
+#  A script to send notifications when somebody
+#  made a connection in SSH.
+#
+#  MIT License
+#  Copyright (c) 2017-2019 Jean Prunneaux
+#  Website: https://github.com/pruje/ssh-notify
+#
+#  Version 1.1.0 (2019-06-29)
+#
 
 #
 #  Initialization
 #
 
+declare -r version=1.1.0
+
 # load libbash
 source "$(dirname "$0")"/libbash/libbash.sh &> /dev/null
 if [ $? != 0 ] ; then
-	echo >&2 "ssh-notify: cannot load libbash"
+	echo >&2 "ssh-notify: internal error"
 	exit 1
 fi
 
@@ -45,12 +43,12 @@ log_date_format="%b %d %H:%M:%S"
 # Print help
 # Usage: print_help
 print_help() {
-	echo "Usage: $0 [OPTIONS] IP_SOURCE [USER]"
+	echo "ssh-notify version $version"
+	echo
+	echo "Usage: $0 [OPTIONS]"
 	echo
 	echo "Options:"
 	echo "  -c, --config PATH  Specify a config file (default /etc/ssh/ssh-notify.conf)"
-	echo "  -i, --install      Run install process"
-	echo "  -u, --uninstall    Run uninstall process"
 	echo "  -h, --help         Print this help"
 }
 
@@ -59,7 +57,10 @@ print_help() {
 # Usage: read_log FILTER
 read_log() {
 	if lb_istrue $journalctl ; then
-		journalctl -g "$*" 2> /dev/null | tail -1
+		# limit print for journalctl
+		local date_limit=$(lb_timestamp2date -f "%Y-%m-%d %H:%M:%S" $(($now - $notify_frequency)))
+
+		journalctl --since "$date_limit" 2> /dev/null | grep "$*" | tail -1
 	else
 		grep "$*" "$log_file" 2> /dev/null | tail -1
 	fi
@@ -79,7 +80,7 @@ get_timestamp() {
 	d=$(echo "$*" | awk "{for(i=1;i<=$spaces;++i) print \$i}")
 
 	# get real date
-	date=$(date -d "$d" '+%Y-%m-%d %H:%M:%S %Z')
+	date=$(date -d "$d" '+%Y-%m-%d %H:%M:%S %Z' 2> /dev/null) || return 1
 
 	for ((i=1; i<=2; i++)) ; do
 		t=$(lb_date2timestamp "$date")
@@ -105,7 +106,7 @@ write_log() {
 		logger "ssh-notify: $*"
 	else
 		mkdir -p "$(dirname "$log_file")" && \
-		echo "$(lb_timestamp2date -f "$log_date_format" $now) $hostname $(whoami): ssh-notify: $*" >> "$log_file"
+		echo "$(lb_timestamp2date -f "$log_date_format" $now) $hostname $user: ssh-notify: $*" >> "$log_file"
 	fi
 }
 
@@ -124,94 +125,13 @@ write_log_error() {
 # Put content in an email template
 # Usage: replace_content FILE
 replace_content() {
+	local ip=$ip_source
+	[ -z "$ip" ] && ip=UNKNOWN
+
 	sed "s/{{email_from}}/$email_sender/g;
 		s/{{email_to}}/$email_monitoring/g;
 		s/{{user}}/$user/g; s/{{hostname}}/$hostname/g;
-		s/{{ip_source}}/$ip_source/g; s/{{date}}/$(lb_timestamp2date $now)/g" "$1"
-}
-
-
-# Install procedure
-# Usage: install
-install() {
-	if [ "$(whoami)" != root ] ; then
-		lb_error "You must be root to install ssh-notify"
-		exit 1
-	fi
-
-	mkdir -p /etc/ssh || exit 1
-
-	# create config file
-	if ! [ -f /etc/ssh/ssh-notify.conf ] ; then
-		cp "$lb_current_script_directory"/ssh-notify.conf /etc/ssh/ssh-notify.conf || exit 1
-	fi
-
-	# create sshrc
-	if ! [ -f /etc/ssh/sshrc ] ; then
-		touch /etc/ssh/sshrc && chown root:root /etc/ssh/sshrc && chmod 755 /etc/ssh/sshrc
-		if [ $? != 0 ] ; then
-			lb_error "Cannot create sshrc file"
-			exit 1
-		fi
-	fi
-
-	# edit sshrc
-	if ! grep -q ssh-notify /etc/ssh/sshrc ; then
-		echo "$lb_current_script \"\$SSH_CONNECTION\" \"\$USER\" &" >> /etc/ssh/sshrc
-		if [ $? != 0 ] ; then
-			lb_error "sshrc cannot be modified"
-			exit 1
-		fi
-	fi
-
-	# no force mode
-	if [ "$1" != "-f" ] ; then
-		echo "WARNING:"
-		echo "If your users cannot use logger and journalctl commands, you can enable"
-		echo "the sudo mode."
-		echo "In this case, please be sure that this script is owned by root and cannot be modified by anyone,"
-		echo "because sudoers will be able to run it without password."
-
-		lb_yesno "Do you want to enable sudoers to run this script?" || return 0
-	fi
-
-	# create ssh-notify group
-	groupadd -f ssh-notify
-	if [ $? != 0 ] ; then
-		lb_error "Cannot create group ssh-notify"
-		exit 1
-	fi
-
-	# create sudoers file
-	mkdir -p /etc/sudoers.d && touch /etc/sudoers.d/ssh-notify && \
-	chown root:root /etc/sudoers.d/ssh-notify	&& chmod 640 /etc/sudoers.d/ssh-notify && \
-	echo "%ssh-notify ALL = NOPASSWD:$lb_current_script" > /etc/sudoers.d/ssh-notify
-	if [ $? != 0 ] ; then
-		lb_error "sudoers file cannot be modified"
-		exit 1
-	fi
-
-	echo "Add all SSH users in the ssh-notify group to enable sudo mode."
-
-	echo "Install finished."
-}
-
-
-# Uninstall procedure
-# Usage: uninstall
-uninstall() {
-	if [ "$(whoami)" != root ] ; then
-		lb_error "You must be root to uninstall ssh-notify"
-		exit 1
-	fi
-
-	# edit sshrc
-	if [ -f /etc/ssh/sshrc ] ; then
-		lb_edit '/ssh-notify/d' /etc/ssh/sshrc || lb_error "sshrc cannot be changed"
-	fi
-
-	# delete sudoers file
-	rm -f /etc/sudoers.d/ssh-notify || lb_error "sudoers file cannot be deleted"
+		s/{{ip_source}}/$ip/g; s/{{date}}/$(lb_timestamp2date $now)/g" "$1"
 }
 
 
@@ -219,24 +139,27 @@ uninstall() {
 #  Main program
 #
 
+# get context
+ssh_info=$SSH_CONNECTION
+user=$lb_current_user
+
 # get options
 while [ $# -gt 0 ] ; do
 	case $1 in
 		-c|--config)
+			[ -z "$2" ] && exit 1
 			config_file=$2
 			shift
 			;;
-		-i|--install)
-			install
-			exit $?
+		--ssh)
+			[ -z "$2" ] && exit 1
+			[ "$lb_current_user" == root ] && ssh_info=$2
+			shift
 			;;
-		--force-install)
-			install -f
-			exit $?
-			;;
-		-u|--uninstall)
-			uninstall
-			exit $?
+		--user)
+			[ -z "$2" ] && exit 1
+			[ "$lb_current_user" == root ] && user=$2
+			shift
 			;;
 		-h|--help)
 			print_help
@@ -249,36 +172,37 @@ while [ $# -gt 0 ] ; do
 	shift
 done
 
-# get IP source (ignore aliases)
-ip_source=$(echo $1 | awk '{print $1}')
+# no ssh: cancel
+if [ -z "$ssh_info" ] ; then
+	lb_error "hey dude, you are not a ssh user!"
+	exit 1
+fi
 
-user=$(whoami)
-# get custom user
-[ -n "$2" ] && user=$2
+# get IP source (ignore aliases)
+ip_source=$(echo $ssh_info | awk '{print $1}')
 
 # get current timestamp
 now=$(date +%s)
 
 # load config
 if ! lb_import_config "$config_file" ; then
-	lb_error "ssh-notify: cannot load config file"
+	lb_error "ssh-notify: error in config"
 	exit 1
 fi
 
 # sudo mode: rerun script
-if lb_istrue $sudo_mode && [ "$(whoami)" != root ] ; then
+if lb_istrue $sudo_mode && [ "$lb_current_user" != root ] ; then
 	# test if user is part of ssh-notify group
 	if groups 2> /dev/null | grep -wq ssh-notify ; then
-		sudo "$0" "$1" $user
+		sudo "$0" -c "$config_file" --ssh "$ssh_info" --user $user
 		exit $?
 	fi
 fi
 
 # test config
-if ! lb_is_integer $notify_frequency ; then
-	# reset to default & continue
-	notify_frequency=60
-fi
+
+# notify frequency: reset to default if not conform
+lb_is_integer $notify_frequency || notify_frequency=60
 
 # check user whitelist: do not continue
 if [ ${#user_whitelist[@]} -gt 0 ] ; then
@@ -286,12 +210,12 @@ if [ ${#user_whitelist[@]} -gt 0 ] ; then
 fi
 
 # check ip whitelist: do not continue
-if [ ${#ip_whitelist[@]} -gt 0 ] ; then
+if [ -n "$ip_source" ] && [ ${#ip_whitelist[@]} -gt 0 ] ; then
 	lb_array_contains $ip_source "${ip_whitelist[@]}" && exit
 fi
 
 if [ -z "$email_destination" ] ; then
-	lb_error "ssh-notify: email recipient not set"
+	lb_error "ssh-notify: error in config"
 	exit 1
 fi
 
@@ -361,7 +285,7 @@ if $log ; then
 		timestamp=$(get_timestamp "$line")
 
 		# test if already notified
-		if [ -n "$timestamp" ] ; then
+		if lb_is_integer $timestamp ; then
 			[ $(($now - $timestamp)) -le $notify_frequency ] && notify=false
 		fi
 	fi
