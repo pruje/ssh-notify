@@ -257,19 +257,9 @@ if $log ; then
 	fi
 
 	# set log file for writing
-	if ! lb_istrue $logger ; then
-		if ! lb_set_logfile -a "$log_file" ; then
-			lb_error "ssh-notify: log file not writable"
-			log=false
-		fi
-	fi
-
-	# test if log file is readable
-	if ! lb_istrue $journalctl ; then
-		if ! [ -r "$log_file" ] ; then
-			lb_error "ssh-notify: log file not readable"
-			log=false
-		fi
+	if ! lb_istrue $logger && ! lb_set_logfile -a "$log_file" ; then
+		lb_error "ssh-notify: log file not writable"
+		log=false
 	fi
 fi
 
@@ -280,16 +270,25 @@ if $log ; then
 	# set log message
 	log_message="SSH connection success $user@$ip_source"
 
-	# read last line of logs
-	line=$(read_log "$log_message")
+	# test if log file is readable
+	log_readable=true
+	if ! lb_istrue $journalctl && ! [ -r "$log_file" ] ; then
+		lb_error "ssh-notify: log file not readable"
+		log_readable=false
+	fi
 
-	if [ -n "$line" ] ; then
-		# get timestamp
-		timestamp=$(get_timestamp "$line")
+	if $log_readable ; then
+		# read last line of logs
+		line=$(read_log "$log_message")
 
-		# test if already notified
-		if lb_is_integer $timestamp ; then
-			[ $(($now - $timestamp)) -le $notify_frequency ] && notify=false
+		if [ -n "$line" ] ; then
+			# get timestamp
+			timestamp=$(get_timestamp "$line")
+
+			# test if already notified
+			if lb_is_integer $timestamp ; then
+				[ $(($now - $timestamp)) -le $notify_frequency ] && notify=false
+			fi
 		fi
 	fi
 
