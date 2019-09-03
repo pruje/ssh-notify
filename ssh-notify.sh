@@ -106,7 +106,7 @@ write_log() {
 		logger "ssh-notify: $*"
 	else
 		mkdir -p "$(dirname "$log_file")" && \
-		echo "$(lb_timestamp2date -f "$log_date_format" $now) $hostname $user: ssh-notify: $*" >> "$log_file"
+		echo "$(LC_ALL=C lb_timestamp2date -f "$log_date_format" $now) $hostname $user: ssh-notify: $*" >> "$log_file"
 	fi
 }
 
