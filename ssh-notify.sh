@@ -284,10 +284,13 @@ if $log ; then
 		if [ -n "$line" ] ; then
 			# get timestamp
 			timestamp=$(get_timestamp "$line")
-
-			# test if already notified
-			if lb_is_integer $timestamp ; then
-				[ $(($now - $timestamp)) -le $notify_frequency ] && notify=false
+			if [ $? == 0 ] ; then
+				# test if already notified
+				if lb_is_integer $timestamp ; then
+					[ $(($now - $timestamp)) -le $notify_frequency ] && notify=false
+				fi
+			else
+				lb_error "ssh-notify: cannot get timestamp. Please check log date format."
 			fi
 		fi
 	fi
