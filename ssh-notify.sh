@@ -8,14 +8,16 @@
 #  Copyright (c) 2017-2019 Jean Prunneaux
 #  Website: https://github.com/pruje/ssh-notify
 #
-#  Version 1.1.1 (2019-06-29)
+#  Version 1.1.2 (2019-09-03)
+#
+#  Usage: ssh-notify [OPTIONS]
+#  Options:
+#     -c, --config PATH  Specify a config file (default /etc/ssh/ssh-notify.conf)
 #
 
 #
 #  Initialization
 #
-
-declare -r version=1.1.1
 
 # load libbash
 source "$(dirname "$0")"/libbash/libbash.sh &> /dev/null
@@ -39,19 +41,6 @@ log_date_format="%b %d %H:%M:%S"
 #
 #  Functions
 #
-
-# Print help
-# Usage: print_help
-print_help() {
-	echo "ssh-notify version $version"
-	echo
-	echo "Usage: $0 [OPTIONS]"
-	echo
-	echo "Options:"
-	echo "  -c, --config PATH  Specify a config file (default /etc/ssh/ssh-notify.conf)"
-	echo "  -h, --help         Print this help"
-}
-
 
 # Read log file
 # Usage: read_log FILTER
@@ -160,10 +149,6 @@ while [ $# -gt 0 ] ; do
 			[ -z "$2" ] && exit 1
 			[ "$lb_current_user" == root ] && user=$2
 			shift
-			;;
-		-h|--help)
-			print_help
-			exit
 			;;
 		*)
 			break
