@@ -179,7 +179,7 @@ if [ -z "$email_destination" ] ; then
 fi
 
 # default log file path
-[ -z "$log_file" ] && log_file=ssh.log
+[ -z "$log_file" ] && log_file=/var/log/ssh-notify.log
 
 # sudo mode
 if lb_istrue $sudo_mode ; then
