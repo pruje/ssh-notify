@@ -8,7 +8,7 @@
 #
 
 # load libbash
-source "$(dirname "$0")"/libbash/libbash.sh &> /dev/null
+source "$(dirname "$0")"/libbash/libbash.sh - &> /dev/null
 if [ $? != 0 ] ; then
 	echo >&2 "internal error"
 	exit 1
@@ -26,6 +26,3 @@ fi
 
 # delete sudoers file
 rm -f /etc/sudoers.d/ssh-notify || lb_error "sudoers file cannot be deleted"
-
-echo
-echo "Uninstall complete"

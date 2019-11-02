@@ -8,7 +8,7 @@
 #
 
 # load libbash
-source "$(dirname "$0")"/libbash/libbash.sh &> /dev/null
+source "$(dirname "$0")"/libbash/libbash.sh - &> /dev/null
 if [ $? != 0 ] ; then
 	echo >&2 "internal error"
 	exit 1
@@ -44,7 +44,7 @@ if ! grep -q ssh-notify /etc/ssh/sshrc ; then
 	fi
 fi
 
-# no force mode
+# if no force mode
 if [ "$1" != "-f" ] ; then
 	echo "WARNING:"
 	echo "If your users cannot use logger and journalctl commands, you can enable"
@@ -55,11 +55,13 @@ if [ "$1" != "-f" ] ; then
 	lb_yesno "Do you want to enable sudoers to run this script?" || return 0
 fi
 
-# create ssh-notify group
-groupadd -f ssh-notify
-if [ $? != 0 ] ; then
-	lb_error "Cannot create group ssh-notify"
-	exit 1
+# create ssh-notify group if not exists
+if ! grep -q '^ssh-notify:' /etc/group ; then
+	addgroup ssh-notify
+	if [ $? != 0 ] ; then
+		lb_error "Cannot create group ssh-notify"
+		exit 1
+	fi
 fi
 
 # create sudoers file
@@ -71,6 +73,4 @@ if [ $? != 0 ] ; then
 	exit 1
 fi
 
-echo "Add all SSH users in the ssh-notify group to enable sudo mode."
-
-echo "Install finished"
+echo "[INFO] Add all authorized SSH users in the ssh-notify group if you want to enable sudo mode."
