@@ -27,6 +27,11 @@ For example, if the last connection is less than 1 hour, you will not reveive an
 ## Configuration
 1. Edit `/etc/ssh/ssh-notify.conf`
 2. Add all users you want to monitor in `ssh-notify` group
+3. (optionnal) If you want to secure access to the log file, you can enable the sudo mode in config
+then add the following line in `/etc/sudoers.d/ssh-notify`:
+```
+%ssh-notify ALL = NOPASSWD:/path/to/ssh-notify/ssh-notify.sh
+```
 
 ## Uninstall
 ### Debian/Ubuntu package

@@ -21,8 +21,16 @@ fi
 
 # edit sshrc
 if [ -f /etc/ssh/sshrc ] ; then
-	lb_edit '/ssh-notify/d' /etc/ssh/sshrc || lb_error "sshrc cannot be changed"
+	if ! lb_edit '/ssh-notify/d' /etc/ssh/sshrc ; then
+		lb_error "sshrc cannot be changed"
+		lb_exitcode=3
+	fi
 fi
 
 # delete sudoers file
-rm -f /etc/sudoers.d/ssh-notify || lb_error "sudoers file cannot be deleted"
+if ! rm -f /etc/sudoers.d/ssh-notify ; then
+	lb_error "sudoers file cannot be deleted"
+	lb_exitcode=3
+fi
+
+lb_exit

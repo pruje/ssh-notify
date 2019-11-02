@@ -8,7 +8,7 @@
 #  Copyright (c) 2017-2019 Jean Prunneaux
 #  Website: https://github.com/pruje/ssh-notify
 #
-#  Version 1.2.0 (2019-11-02)
+#  Version 1.2.1 (2019-11-02)
 #
 
 #
@@ -188,9 +188,12 @@ if lb_istrue $sudo_mode ; then
 		touch "$log_file" && \
 		chown root:ssh-notify "$log_file" && chmod 600 "$log_file"
 	else
-		# re-run script
-		sudo "$0" --ssh "$ssh_info" --user "$user"
-		exit $?
+		# check sudoers file
+		if [ -f /etc/sudoers.d/ssh-notify ] ; then
+			# re-run script
+			sudo "$0" --ssh "$ssh_info" --user "$user"
+			exit $?
+		fi
 	fi
 fi
 
