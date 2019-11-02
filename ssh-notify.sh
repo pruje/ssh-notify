@@ -34,7 +34,6 @@ fi
 
 templates=$lb_current_script_directory/emails
 email_template=default
-logger=true
 log_date_format="%b %d %H:%M:%S"
 
 
@@ -45,14 +44,7 @@ log_date_format="%b %d %H:%M:%S"
 # Read log file
 # Usage: read_log FILTER
 read_log() {
-	if lb_istrue $journalctl ; then
-		# limit print for journalctl
-		local date_limit=$(lb_timestamp2date -f "%Y-%m-%d %H:%M:%S" $(($now - $notify_frequency)))
-
-		journalctl --output short-full --since "$date_limit" 2> /dev/null | grep "$*" | tail -1
-	else
-		grep "$*" "$log_file" 2> /dev/null | tail -1
-	fi
+	grep "$*" "$log_file" 2> /dev/null | tail -1
 }
 
 
@@ -91,12 +83,8 @@ write_log() {
 	# no log: quit
 	$log || return 0
 
-	if lb_istrue $logger ; then
-		logger "ssh-notify: $*"
-	else
-		mkdir -p "$(dirname "$log_file")" && \
-		echo "$(LC_ALL=C lb_timestamp2date -f "$log_date_format" $now) $hostname $user: ssh-notify: $*" >> "$log_file"
-	fi
+	mkdir -p "$(dirname "$log_file")" && \
+	echo "$(LC_ALL=C lb_timestamp2date -f "$log_date_format" $now) $hostname $user: ssh-notify: $*" >> "$log_file"
 }
 
 
@@ -202,46 +190,22 @@ if [ -z "$email_destination" ] ; then
 	exit 1
 fi
 
-notify=true
-log=true
+# default log file path
+[ -z "$log_file" ] && log_file=ssh.log
 
-# notify everytime: do not use logs
-if [ "$notify_frequency" == 0 ] ; then
-	log=false
-else
-	# set log file
-	if [ -z "$log_file" ] ; then
-		# search default log file
-		for f in /var/log/syslog /var/log/messages ; do
-			[ -f "$f" ] && log_file=$f
-		done
+log=false
 
-		if [ -z "$log_file" ] ; then
-			lb_error "ssh-notify: log file not found"
-			log=false
-		fi
-	fi
-fi
-
-if $log ; then
-	# test logger and journalctl commands
-	if lb_istrue $logger ; then
-		if lb_command_exists logger ; then
-			# test journalctl
-			if lb_command_exists journalctl && journalctl -n 1 &> /dev/null ; then
-				journalctl=true
-			fi
-		else
-			logger=false
-		fi
-	fi
-
+# if notify everytime (frequency=0), do not use logs
+if [ "$notify_frequency" -gt 0 ] ; then
 	# set log file for writing
-	if ! lb_istrue $logger && ! lb_set_logfile -a "$log_file" ; then
+	if lb_set_logfile -a "$log_file" ; then
+		log=true
+	else
 		lb_error "ssh-notify: log file not writable"
-		log=false
 	fi
 fi
+
+notify=true
 
 if $log ; then
 	# convert frequency in seconds
@@ -251,13 +215,7 @@ if $log ; then
 	log_message="SSH connection success $user@$ip_source"
 
 	# test if log file is readable
-	log_readable=true
-	if ! lb_istrue $journalctl && ! [ -r "$log_file" ] ; then
-		lb_error "ssh-notify: log file not readable"
-		log_readable=false
-	fi
-
-	if $log_readable ; then
+	if [ -r "$log_file" ] ; then
 		# read last line of logs
 		line=$(read_log "$log_message")
 
