@@ -10,10 +10,6 @@
 #
 #  Version 1.1.2 (2019-09-03)
 #
-#  Usage: ssh-notify [OPTIONS]
-#  Options:
-#     -c, --config PATH  Specify a config file (default /etc/ssh/ssh-notify.conf)
-#
 
 #
 #  Initialization
@@ -26,12 +22,16 @@ if [ $? != 0 ] ; then
 	exit 1
 fi
 
+# if user is not in ssh-notify group, quit
+if [ $lb_current_user != root ] ; then
+	lb_in_group ssh-notify || exit
+fi
+
 
 #
 #  Default config
 #
 
-config_file=/etc/ssh/ssh-notify.conf
 templates=$lb_current_script_directory/emails
 email_template=default
 logger=true
@@ -135,11 +135,6 @@ user=$lb_current_user
 # get options
 while [ $# -gt 0 ] ; do
 	case $1 in
-		-c|--config)
-			[ -z "$2" ] && exit 1
-			config_file=$2
-			shift
-			;;
 		--ssh)
 			[ -z "$2" ] && exit 1
 			[ "$lb_current_user" == root ] && ssh_info=$2
@@ -170,10 +165,13 @@ ip_source=$(echo $ssh_info | awk '{print $1}')
 now=$(date +%s)
 
 # analyse config template
-lb_read_config -a "$lb_current_script_directory"/ssh-notify.conf
+if ! lb_read_config -a "$lb_current_script_directory"/ssh-notify.conf ; then
+	lb_error "ssh-notify: error in config"
+	exit 1
+fi
 
-# load config and import only good variables
-if ! lb_import_config "$config_file" "${lb_read_config[@]}" ; then
+# load config securely
+if ! lb_import_config /etc/ssh/ssh-notify.conf "${lb_read_config[@]}" ; then
 	lb_error "ssh-notify: error in config"
 	exit 1
 fi
@@ -187,19 +185,16 @@ if lb_istrue $sudo_mode && [ "$lb_current_user" != root ] ; then
 	fi
 fi
 
-# test config
-
-# notify frequency: reset to default if not conform
-lb_is_integer $notify_frequency || notify_frequency=60
-
-# check user whitelist: do not continue
-if [ ${#user_whitelist[@]} -gt 0 ] ; then
-	lb_array_contains $user "${user_whitelist[@]}" && exit
-fi
-
 # check ip whitelist: do not continue
 if [ -n "$ip_source" ] && [ ${#ip_whitelist[@]} -gt 0 ] ; then
 	lb_array_contains $ip_source "${ip_whitelist[@]}" && exit
+fi
+
+# test config
+
+# notify frequency: reset to default if not conform
+if ! lb_is_integer $notify_frequency || [ $notify_frequency -lt 0 ] ; then
+	notify_frequency=60
 fi
 
 if [ -z "$email_destination" ] ; then

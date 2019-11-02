@@ -21,7 +21,7 @@ fi
 
 mkdir -p /etc/ssh || exit 1
 
-# create config file
+# create config file if not exists
 if ! [ -f /etc/ssh/ssh-notify.conf ] ; then
 	cp "$lb_current_script_directory"/ssh-notify.conf /etc/ssh/ssh-notify.conf || exit 1
 fi
