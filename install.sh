@@ -7,8 +7,10 @@
 #  Website: https://github.com/pruje/ssh-notify
 #
 
+curdir=$(dirname "$0")
+
 # load libbash
-source "$(dirname "$0")"/libbash/libbash.sh - &> /dev/null
+source "$curdir"/libbash/libbash.sh - &> /dev/null
 if [ $? != 0 ] ; then
 	echo >&2 "internal error"
 	exit 1
@@ -19,16 +21,30 @@ if [ "$lb_current_user" != root ] ; then
 	exit 1
 fi
 
-mkdir -p /etc/ssh || exit 1
+# secure files
+chown -R root:root "$curdir"
+chmod -R 755 "$curdir"
+chmod -x "$curdir"/*.md "$curdir"/*.conf "$curdir"/emails/* \
+         "$curdir"/libbash/*.* "$curdir"/libbash/*/*
 
 # create config file if not exists
 if ! [ -f /etc/ssh/ssh-notify.conf ] ; then
-	cp "$lb_current_script_directory"/ssh-notify.conf /etc/ssh/ssh-notify.conf || exit 1
+	mkdir -p /etc/ssh && \
+	cp "$curdir"/ssh-notify.conf /etc/ssh/ssh-notify.conf
+	if [ $? != 0 ] ; then
+		lb_error "Cannot create config file"
+		exit 1
+	fi
 fi
+
+# secure config
+chown root:ssh-notify /etc/ssh/ssh-notify.conf
+chmod 640 /etc/ssh/ssh-notify
 
 # create sshrc
 if ! [ -f /etc/ssh/sshrc ] ; then
-	touch /etc/ssh/sshrc && chown root:root /etc/ssh/sshrc && chmod 755 /etc/ssh/sshrc
+	touch /etc/ssh/sshrc && \
+	chown root:root /etc/ssh/sshrc && chmod 755 /etc/ssh/sshrc
 	if [ $? != 0 ] ; then
 		lb_error "Cannot create sshrc file"
 		exit 1

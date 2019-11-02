@@ -10,26 +10,30 @@ connection by SSH then it sends an email.
 In the config file, you can set a period of time to avoid receiving multiple times the same email.
 For example, if the last connection is less than 1 hour, you will not reveive another email.
 
-**ssh-notify** uses `logger` and `journactl` commands to read/write the log,
-but you can use a custom log file if you have access issues.
-If you want to secure writes inside the logs, you can also run ssh-notify in sudo mode.
-In this case, you have to add SSH users in `ssh-notify` sudoers group.
-
 ## Requirements
 - `bash`
 - `sendmail`
-- Optionnal: `sudo`
 
 ## Install
-Download and install the last version of the deb package here: https://github.com/pruje/ssh-notify/releases
+### Debian/Ubuntu package
+1. Download the last version of [ssh-notify here](https://github.com/pruje/ssh-notify/releases)
+2. Run `dpkg -i ssh-notify-X.X.X.deb`
 
-## Manual install
+### Manual install
 1. Clone this repository: `git clone https://github.com/pruje/ssh-notify`
 2. Update submodules: `git submodule update --init`
-3. Run `./ssh-notify.sh --install`
+3. Run `install.sh`
+
+## Configuration
+1. Edit `/etc/ssh/ssh-notify.conf`
+2. Add all users you want to monitor in `ssh-notify` group
 
 ## Uninstall
-Uninstall the deb package or run `./ssh-notify.sh --uninstall`.
+### Debian/Ubuntu package
+Run `apt remove ssh-notify`
+
+### Manual install
+Run `uninstall.sh`
 
 ## License
 ssh-notify is licensed under the MIT License. See [LICENSE.md](LICENSE.md) for the full license text.
