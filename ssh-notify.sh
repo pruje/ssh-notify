@@ -24,8 +24,12 @@ fi
 
 # if user is not in ssh-notify group, quit
 if [ $lb_current_user != root ] ; then
-	lb_in_group ssh-notify || exit
+	lb_in_group ssh-notify || exit 0
 fi
+
+# get context
+ssh_info=$SSH_CONNECTION
+user=$lb_current_user
 
 
 #
@@ -116,10 +120,6 @@ replace_content() {
 #  Main program
 #
 
-# get context
-ssh_info=$SSH_CONNECTION
-user=$lb_current_user
-
 # get options
 while [ $# -gt 0 ] ; do
 	case $1 in
@@ -146,12 +146,6 @@ if [ -z "$ssh_info" ] ; then
 	exit 1
 fi
 
-# get IP source (ignore aliases)
-ip_source=$(echo $ssh_info | awk '{print $1}')
-
-# get current timestamp
-now=$(date +%s)
-
 # analyse config template
 if ! lb_read_config -a "$lb_current_script_directory"/ssh-notify.conf ; then
 	lb_error "ssh-notify: error in config"
@@ -164,14 +158,8 @@ if ! lb_import_config /etc/ssh/ssh-notify.conf "${lb_read_config[@]}" ; then
 	exit 1
 fi
 
-# sudo mode: rerun script
-if lb_istrue $sudo_mode && [ "$lb_current_user" != root ] ; then
-	# test if user is part of ssh-notify group
-	if groups 2> /dev/null | grep -wq ssh-notify ; then
-		sudo "$0" -c "$config_file" --ssh "$ssh_info" --user $user
-		exit $?
-	fi
-fi
+# get IP source (ignore aliases)
+ip_source=$(echo $ssh_info | awk '{print $1}')
 
 # check ip whitelist: do not continue
 if [ -n "$ip_source" ] && [ ${#ip_whitelist[@]} -gt 0 ] ; then
@@ -193,6 +181,19 @@ fi
 # default log file path
 [ -z "$log_file" ] && log_file=ssh.log
 
+# sudo mode
+if lb_istrue $sudo_mode ; then
+	if [ $lb_current_user == root ] ; then
+		# secure log file
+		touch "$log_file" && \
+		chown root:ssh-notify "$log_file" && chmod 600 "$log_file"
+	else
+		# re-run script
+		sudo "$0" --ssh "$ssh_info" --user "$user"
+		exit $?
+	fi
+fi
+
 log=false
 
 # if notify everytime (frequency=0), do not use logs
@@ -204,6 +205,9 @@ if [ "$notify_frequency" -gt 0 ] ; then
 		lb_error "ssh-notify: log file not writable"
 	fi
 fi
+
+# get current timestamp
+now=$(date +%s)
 
 notify=true
 
@@ -238,7 +242,7 @@ if $log ; then
 fi
 
 # no need to notify: exit
-$notify || exit
+$notify || exit 0
 
 if ! [ -f "$templates/$email_template".txt ] ; then
 	write_log_error "Email template not found"

@@ -44,17 +44,6 @@ if ! grep -q ssh-notify /etc/ssh/sshrc ; then
 	fi
 fi
 
-# if no force mode
-if [ "$1" != "-f" ] ; then
-	echo "WARNING:"
-	echo "If your users cannot use logger and journalctl commands, you can enable"
-	echo "the sudo mode."
-	echo "In this case, please be sure that this script is owned by root and cannot be modified by anyone,"
-	echo "because sudoers will be able to run it without password."
-
-	lb_yesno "Do you want to enable sudoers to run this script?" || return 0
-fi
-
 # create ssh-notify group if not exists
 if ! grep -q '^ssh-notify:' /etc/group ; then
 	addgroup ssh-notify
@@ -69,8 +58,8 @@ mkdir -p /etc/sudoers.d && touch /etc/sudoers.d/ssh-notify && \
 chown root:root /etc/sudoers.d/ssh-notify	&& chmod 640 /etc/sudoers.d/ssh-notify && \
 echo "%ssh-notify ALL = NOPASSWD:$lb_current_script_directory/ssh-notify.sh" > /etc/sudoers.d/ssh-notify
 if [ $? != 0 ] ; then
-	lb_error "sudoers file cannot be modified"
+	lb_error "Cannot edit sudoers."
 	exit 1
 fi
 
-echo "[INFO] Add all authorized SSH users in the ssh-notify group if you want to enable sudo mode."
+echo "[INFO] Add all authorized SSH users in the ssh-notify group."
