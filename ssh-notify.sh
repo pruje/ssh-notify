@@ -8,7 +8,7 @@
 #  Copyright (c) 2017-2019 Jean Prunneaux
 #  Website: https://github.com/pruje/ssh-notify
 #
-#  Version 1.2.1 (2019-11-02)
+#  Version 1.3.0 (2020-03-31)
 #
 
 #
@@ -29,6 +29,7 @@ fi
 
 # get context
 ssh_info=$SSH_CONNECTION
+details=$SSH_DETAILS
 user=$lb_current_user
 
 
@@ -111,7 +112,9 @@ replace_content() {
 
 	sed "s/{{email_from}}/$email_sender/g;
 		s/{{email_to}}/$email_monitoring/g;
-		s/{{user}}/$user/g; s/{{hostname}}/$hostname/g;
+		s/{{hostname}}/$hostname/g;
+		s/{{user}}/$user/g;
+		s/{{details}}/$details/g;
 		s/{{ip_source}}/$ip/g; s/{{date}}/$(lb_timestamp2date $now)/g" "$1"
 }
 
@@ -125,12 +128,17 @@ while [ $# -gt 0 ] ; do
 	case $1 in
 		--ssh)
 			[ -z "$2" ] && exit 1
-			[ "$lb_current_user" == root ] && ssh_info=$2
+			[ "$lb_current_user" = root ] && ssh_info=$2
 			shift
 			;;
 		--user)
 			[ -z "$2" ] && exit 1
-			[ "$lb_current_user" == root ] && user=$2
+			[ "$lb_current_user" = root ] && user=$2
+			shift
+			;;
+		--details)
+			[ -z "$2" ] && exit 1
+			[ "$lb_current_user" = root ] && details=$2
 			shift
 			;;
 		*)
@@ -183,7 +191,7 @@ fi
 
 # sudo mode
 if lb_istrue $sudo_mode ; then
-	if [ $lb_current_user == root ] ; then
+	if [ "$lb_current_user" = root ] ; then
 		# secure log file
 		touch "$log_file" && \
 		chown root:ssh-notify "$log_file" && chmod 600 "$log_file"
@@ -191,7 +199,7 @@ if lb_istrue $sudo_mode ; then
 		# check sudoers file
 		if [ -f /etc/sudoers.d/ssh-notify ] ; then
 			# re-run script
-			sudo "$0" --ssh "$ssh_info" --user "$user"
+			sudo "$0" --ssh "$ssh_info" --user "$user" --details "$details"
 			exit $?
 		fi
 	fi
@@ -229,7 +237,7 @@ if $log ; then
 		if [ -n "$line" ] ; then
 			# get timestamp
 			timestamp=$(get_timestamp "$line")
-			if [ $? == 0 ] ; then
+			if [ $? = 0 ] ; then
 				# test if already notified
 				if lb_is_integer $timestamp ; then
 					[ $(($now - $timestamp)) -le $notify_frequency ] && notify=false
