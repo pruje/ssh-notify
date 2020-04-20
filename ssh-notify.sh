@@ -5,10 +5,10 @@
 #  made a connection in SSH.
 #
 #  MIT License
-#  Copyright (c) 2017-2019 Jean Prunneaux
+#  Copyright (c) 2017-2020 Jean Prunneaux
 #  Website: https://github.com/pruje/ssh-notify
 #
-#  Version 1.3.0 (2020-03-31)
+#  Version 1.4.0 (2020-04-20)
 #
 
 #
@@ -181,7 +181,7 @@ if ! lb_is_integer $notify_frequency || [ $notify_frequency -lt 0 ] ; then
 	notify_frequency=60
 fi
 
-if [ -z "$email_destination" ] ; then
+if [ ${#email_destination} = 0 ] ; then
 	lb_error "ssh-notify: error in config"
 	exit 1
 fi
@@ -259,6 +259,9 @@ if ! [ -f "$templates/$email_template".txt ] ; then
 	write_log_error "Email template not found"
 	exit 4
 fi
+
+# replace email destinations if current user defined
+email_destination=$(echo "$email_destination" | sed "s/{user}/$user/g")
 
 # get hostname if not defined
 [ -z "$hostname" ] && hostname=$lb_current_hostname
