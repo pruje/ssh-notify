@@ -23,7 +23,7 @@ if [ $? != 0 ] ; then
 fi
 
 # if user is not in ssh-notify group, quit
-if [ $lb_current_user != root ] ; then
+if ! lb_ami_root ; then
 	lb_in_group ssh-notify || exit 0
 fi
 
@@ -128,17 +128,17 @@ while [ $# -gt 0 ] ; do
 	case $1 in
 		--ssh)
 			[ -z "$2" ] && exit 1
-			[ "$lb_current_user" = root ] && ssh_info=$2
+			lb_ami_root && ssh_info=$2
 			shift
 			;;
 		--user)
 			[ -z "$2" ] && exit 1
-			[ "$lb_current_user" = root ] && user=$2
+			lb_ami_root && user=$2
 			shift
 			;;
 		--details)
 			[ -z "$2" ] && exit 1
-			[ "$lb_current_user" = root ] && details=$2
+			lb_ami_root && details=$2
 			shift
 			;;
 		*)
@@ -191,7 +191,7 @@ fi
 
 # sudo mode
 if lb_istrue $sudo_mode ; then
-	if [ "$lb_current_user" = root ] ; then
+	if lb_ami_root ; then
 		# secure log file
 		touch "$log_file" && \
 		chown root:ssh-notify "$log_file" && chmod 600 "$log_file"
