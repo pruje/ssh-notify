@@ -154,14 +154,8 @@ if [ -z "$ssh_info" ] ; then
 	exit 1
 fi
 
-# analyse config template
-if ! lb_read_config -a "$lb_current_script_directory"/ssh-notify.conf ; then
-	lb_error "ssh-notify: error in config"
-	exit 1
-fi
-
 # load config securely
-if ! lb_import_config /etc/ssh/ssh-notify.conf "${lb_read_config[@]}" ; then
+if ! lb_import_config -t "$lb_current_script_directory"/ssh-notify.conf /etc/ssh/ssh-notify.conf ; then
 	lb_error "ssh-notify: error in config"
 	exit 1
 fi
