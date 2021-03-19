@@ -5,10 +5,10 @@
 #  made a connection in SSH.
 #
 #  MIT License
-#  Copyright (c) 2017-2020 Jean Prunneaux
+#  Copyright (c) 2017-2021 Jean Prunneaux
 #  Website: https://github.com/pruje/ssh-notify
 #
-#  Version 1.4.0 (2020-04-20)
+#  Version 1.4.2 (2021-03-19)
 #
 
 #
