@@ -193,8 +193,10 @@ if lb_istrue $sudo_mode ; then
 		# check sudoers file
 		if [ -f /etc/sudoers.d/ssh-notify ] ; then
 			# re-run script
-			sudo "$0" --ssh "$ssh_info" --user "$user" --details "$details"
-			exit $?
+			args=()
+			[ -n "$details" ] && args=(--details "$details")
+			sudo "$0" --ssh "$ssh_info" --user "$user" "${args[@]}"
+			exit
 		fi
 	fi
 fi
