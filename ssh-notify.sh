@@ -8,7 +8,7 @@
 #  Copyright (c) 2017-2021 Jean Prunneaux
 #  Website: https://github.com/pruje/ssh-notify
 #
-#  Version 1.4.2 (2021-03-19)
+#  Version 1.4.3 (2021-05-02)
 #
 
 #
