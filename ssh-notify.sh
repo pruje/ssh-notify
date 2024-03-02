@@ -188,16 +188,13 @@ if lb_istrue $sudo_mode ; then
 	if lb_ami_root ; then
 		# secure log file
 		touch "$log_file" && \
-		chown root:ssh-notify "$log_file" && chmod 600 "$log_file"
+		chown root:root "$log_file" && chmod 600 "$log_file"
 	else
-		# check sudoers file
-		if [ -f /etc/sudoers.d/ssh-notify ] ; then
-			# re-run script
-			args=()
-			[ -n "$details" ] && args=(--details "$details")
-			sudo "$0" --ssh "$ssh_info" --user "$user" "${args[@]}"
-			exit
-		fi
+		# re-run script
+		args=()
+		[ -n "$details" ] && args=(--details "$details")
+		sudo "$0" --ssh "$ssh_info" --user "$user" "${args[@]}"
+		exit
 	fi
 fi
 
