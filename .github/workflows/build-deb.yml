@@ -1,0 +1,101 @@
+name: Build deb package on release
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  build-deb:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo with submodules
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          # needed for submodules
+          fetch-depth: 0
+
+      - name: Install deb build tools
+        run: |
+          sudo apt-get update -qq && \
+          sudo apt-get install -yqq build-essential devscripts debhelper fakeroot lintian
+
+      - name: Set up Debian packaging
+        run: |
+          APP_NAME=ssh-notify
+          # get release version without the "v"
+          VERSION="$(echo ${GITHUB_REF##*/} | sed 's/^v//')"
+          INSTALL_DIR=usr/src/$APP_NAME
+
+          mkdir -p debian/source
+          
+          # Create control file (adjust fields accordingly)
+          cat <<EOF > debian/control
+          Source: $APP_NAME
+          Section: base
+          Priority: optional
+          Maintainer: Jean Prunneaux <jean@prunneaux.com>
+          Homepage: https://github.com/${{ github.repository }}
+          Build-Depends: debhelper-compat (= 13)
+          Standards-Version: 4.5.1
+
+          Package: $APP_NAME
+          Architecture: all
+          Depends: bash, rsync
+          Description: Simple but powerful backup tool using bash.
+          EOF
+
+          # Minimal rules file
+          cat <<EOF > debian/rules
+          #!/usr/bin/make -f
+          %:
+          	dh \$@
+          EOF
+          chmod +x debian/rules
+
+          # Other required files
+          echo 1.0 > debian/source/format
+
+          # Changelog
+          dch --create -v "$VERSION" --package ssh-notify "Release $VERSION"
+
+          # Copy files instructions
+          cat <<EOF > debian/install
+          *.md $INSTALL_DIR/
+          *.sh $INSTALL_DIR/
+          *.conf $INSTALL_DIR/
+          emails $INSTALL_DIR/
+          libbash/*.sh $INSTALL_DIR/libbash/
+          libbash/inc $INSTALL_DIR/libbash/
+          libbash/locales $INSTALL_DIR/libbash/
+          EOF
+
+          # Create the postinstall script
+          cat <<EOF > debian/ssh-notify.postinst
+          #!/bin/bash
+          # run install command, ignore errors
+          /usr/src/ssh-notify/ssh-notify.sh install || true
+          EOF
+
+          # Create the prerm script (before uninstall)
+          cat <<EOF > debian/ssh-notify.prerm
+          #!/bin/bash
+          # run uninstall command, ignore errors
+          "/$INSTALL_DIR/ssh-notify.sh" uninstall --yes || true
+          EOF
+
+          # Gives exec permissions to scripts
+          chmod +x debian/ssh-notify.postinst debian/ssh-notify.prerm
+
+      - name: Build the deb package
+        run: |
+          # build without signing
+          dpkg-buildpackage -us -uc
+
+      - name: Upload .deb to release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: ../ssh-notify_*.deb
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

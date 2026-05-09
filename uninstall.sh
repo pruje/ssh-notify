@@ -2,9 +2,7 @@
 #
 #  ssh-notify uninstall script
 #
-#  MIT License
-#  Copyright (c) 2017-2021 Jean Prunneaux
-#  Website: https://github.com/pruje/ssh-notify
+#  Sources: https://github.com/pruje/ssh-notify
 #
 
 # load libbash
